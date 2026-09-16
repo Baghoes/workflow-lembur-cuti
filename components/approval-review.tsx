@@ -1,210 +1,165 @@
 "use client"
 
 import { useState } from "react"
-import type { Submission } from "@/lib/types"
-import { formatDuration, formatDays } from "@/lib/types"
+import { Search, Loader2, Clock, CalendarRange, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
 
-interface ApprovalReviewProps {
-  submissions: Submission[]
-  onApprove: (id: string) => void
-  onReject: (id: string, note: string) => void
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9xRBuFYDzGipEKtGFmdaksQYzHLm50UpBG3Hguh7pQJUjNx2LAuj46y5pTAdZT_bDBA/exec"
+
+interface StatusItem {
+  id: string
+  tanggal: string
+  jenis: string
+  waktu: string
+  pekerjaan: string
+  status: string
+  approvedBy?: string
 }
 
-const statusStyles: Record<Submission["status"], string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  rejected: "bg-red-50 text-red-700 border-red-200",
-}
+export function ApprovalReview() {
+  const [employeeId, setEmployeeId] = useState("")
+  const [pin, setPin] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [dataList, setDataList] = useState<StatusItem[] | null>(null)
 
-const statusLabels: Record<Submission["status"], string> = {
-  pending: "Menunggu",
-  approved: "Disetujui",
-  rejected: "Ditolak",
-}
+  async function handleCheck(e: React.FormEvent) {
+    e.preventDefault()
+    if (!employeeId || !pin) return
 
-function formatDate(value: string) {
-  if (!value) return "-"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
-}
+    setLoading(true)
+    setErrorMsg(null)
+    setDataList(null)
 
-export function ApprovalReview({ submissions, onApprove, onReject }: ApprovalReviewProps) {
-  if (submissions.length === 0) {
+    try {
+      const response = await fetch(
+        `${SCRIPT_URL}?action=check_status&id_finger=${encodeURIComponent(employeeId.trim())}&pin=${encodeURIComponent(pin.trim())}`
+      )
+      const res = await response.json()
+
+      if (res.status === "success") {
+        setDataList(res.data)
+      } else {
+        setErrorMsg(res.message || "Data tidak ditemukan atau PIN salah.")
+      }
+    } catch (err) {
+      console.error(err)
+      setErrorMsg("Gagal mengambil data. Pastikan koneksi internet stabil.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const s = (status || "").toUpperCase()
+    if (s === "APPROVED") {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+          <CheckCircle2 className="size-3.5" /> Disetujui
+        </span>
+      )
+    }
+    if (s === "REJECTED") {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 border border-rose-200">
+          <XCircle className="size-3.5" /> Ditolak
+        </span>
+      )
+    }
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-6 py-14 text-center">
-        <p className="text-sm font-medium text-slate-600">Belum ada pengajuan</p>
-        <p className="mt-1 text-sm text-slate-400">
-          Pengajuan lembur & cuti yang dikirim karyawan akan muncul di sini untuk ditinjau.
-        </p>
-      </div>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 border border-amber-200">
+        <Clock className="size-3.5" /> Menunggu
+      </span>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {submissions.map((submission) => (
-        <ApprovalCard key={submission.id} submission={submission} onApprove={onApprove} onReject={onReject} />
-      ))}
-    </div>
-  )
-}
-
-function ApprovalCard({
-  submission,
-  onApprove,
-  onReject,
-}: {
-  submission: Submission
-  onApprove: (id: string) => void
-  onReject: (id: string, note: string) => void
-}) {
-  const [rejecting, setRejecting] = useState(false)
-  const [note, setNote] = useState("")
-
-  const isPending = submission.status === "pending"
-  const isLembur = submission.type === "lembur"
-  const timeRange =
-    submission.startTime && submission.endTime ? `${submission.startTime} - ${submission.endTime}` : "-"
-
-  return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-slate-900">ID Finger: {submission.employeeId}</h3>
-            <span
-              className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                isLembur ? "bg-blue-50 text-blue-700" : "bg-violet-50 text-violet-700"
-              }`}
-            >
-              {isLembur ? "Lembur" : "Cuti"}
-            </span>
-          </div>
-          <p className="mt-0.5 text-sm text-slate-500">WhatsApp: {submission.whatsapp}</p>
-        </div>
-        <span
-          className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyles[submission.status]}`}
-        >
-          {statusLabels[submission.status]}
-        </span>
-      </div>
-
-      {isLembur ? (
-        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Tanggal</dt>
-            <dd className="mt-0.5 font-medium text-slate-700">{formatDate(submission.date)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Rentang Jam</dt>
-            <dd className="mt-0.5 font-medium text-slate-700">{timeRange}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Estimasi Durasi</dt>
-            <dd className="mt-0.5 font-semibold text-blue-600">
-              {submission.durationHours !== null ? formatDuration(submission.durationHours) : "-"}
-            </dd>
-          </div>
-        </dl>
-      ) : (
-        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-4">
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Jenis Cuti</dt>
-            <dd className="mt-0.5 font-medium text-slate-700">{submission.leaveType || "-"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Tanggal Mulai</dt>
-            <dd className="mt-0.5 font-medium text-slate-700">{formatDate(submission.date)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Tanggal Selesai</dt>
-            <dd className="mt-0.5 font-medium text-slate-700">{formatDate(submission.endDate || "")}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Total Cuti</dt>
-            <dd className="mt-0.5 font-semibold text-blue-600">
-              {submission.totalDays != null ? formatDays(submission.totalDays) : "-"}
-            </dd>
-          </div>
-        </dl>
-      )}
-
-      <div className="mt-3 rounded-lg bg-slate-50 px-3.5 py-3">
-        <p className="text-xs uppercase tracking-wide text-slate-400">
-          {isLembur ? "Uraian Tugas" : "Alasan Cuti"}
+    <div className="space-y-6">
+      {/* Box Verifikasi Cek Status */}
+      <form onSubmit={handleCheck} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+        <p className="text-xs text-slate-500 font-medium">
+          Masukkan ID Finger dan PIN Anda untuk memantau status persetujuan pengajuan:
         </p>
-        <p className="mt-1 text-sm text-slate-700">{submission.note}</p>
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="ID Finger Anda"
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value.replace(/\D/g, ""))}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            required
+          />
+          <input
+            type="password"
+            inputMode="numeric"
+            placeholder="PIN Anda"
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading || !employeeId || !pin}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+          {loading ? "Mencari data..." : "Lihat Status Pengajuan"}
+        </button>
+      </form>
 
-      {submission.status === "rejected" && submission.rejectionNote && (
-        <div className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3.5 py-3">
-          <p className="text-xs uppercase tracking-wide text-red-400">Catatan Penolakan</p>
-          <p className="mt-1 text-sm text-red-700">{submission.rejectionNote}</p>
+      {errorMsg && (
+        <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 
-      {isPending && !rejecting && (
-        <div className="mt-5 flex gap-3">
-          <button
-            onClick={() => onApprove(submission.id)}
-            className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          >
-            Setujui
-          </button>
-          <button
-            onClick={() => setRejecting(true)}
-            className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/40"
-          >
-            Tolak
-          </button>
-        </div>
-      )}
+      {/* Tampilan Daftar Status */}
+      {dataList && (
+        <div className="space-y-3">
+          {dataList.length === 0 ? (
+            <p className="text-center text-sm text-slate-500 py-6">Belum ada riwayat pengajuan.</p>
+          ) : (
+            dataList.map((item, idx) => (
+              <div
+                key={item.id || idx}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3 transition hover:border-slate-300"
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                      {item.id || "Pengajuan"}
+                    </span>
+                    <span className="text-xs text-slate-400">•</span>
+                    <span className="text-xs text-slate-500">{item.tanggal}</span>
+                  </div>
+                  {getStatusBadge(item.status)}
+                </div>
 
-      {isPending && rejecting && (
-        <div className="mt-5 space-y-3">
-          <div className="space-y-2">
-            <label htmlFor={`reject-${submission.id}`} className="block text-sm font-medium text-slate-700">
-              Catatan Penolakan
-            </label>
-            <textarea
-              id={`reject-${submission.id}`}
-              rows={2}
-              autoFocus
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Berikan alasan penolakan..."
-              className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500/20 placeholder:text-slate-400"
-            />
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                onReject(submission.id, note.trim())
-                setRejecting(false)
-                setNote("")
-              }}
-              disabled={note.trim().length === 0}
-              className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/40 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Konfirmasi Tolak
-            </button>
-            <button
-              onClick={() => {
-                setRejecting(false)
-                setNote("")
-              }}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-            >
-              Batal
-            </button>
-          </div>
+                <div className="text-sm text-slate-800">
+                  <span className="text-xs font-medium text-slate-400 block mb-0.5">Uraian Tugas / Alasan:</span>
+                  <p className="line-clamp-2">{item.pekerjaan}</p>
+                </div>
+
+                {item.waktu && (
+                  <div className="text-xs text-slate-500 flex items-center gap-1.5 pt-1">
+                    <Clock className="size-3.5 text-slate-400" />
+                    <span>Waktu: {item.waktu}</span>
+                  </div>
+                )}
+
+                {item.approvedBy && (
+                  <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-50">
+                    Ditinjau oleh: <span className="font-medium text-slate-600">{item.approvedBy}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       )}
-    </article>
+    </div>
   )
 }
