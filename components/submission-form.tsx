@@ -24,7 +24,8 @@ const initialForm = {
   note: "",
 }
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9xRBuFYDzGipEKtGFmdaksQYzHLm50UpBG3Hguh7pQJUjNx2LAuj46y5pTAdZT_bDBA/exec"
+// Menggunakan API route lokal internal Next.js (bebas blokir CORS di HP)
+const SCRIPT_URL = "/api/submit"
 
 const fieldClasses =
   "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 placeholder:text-slate-400"
@@ -68,7 +69,7 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
 
     const formattedWa = `62${form.whatsapp.replace(/^0+/, "")}`
 
-    // Payload data yang dikirim ke Google Apps Script
+    // Payload data yang dikirim ke /api/submit
     const payload = {
       id_finger: form.employeeId.trim(),
       pin: form.pin.trim(),
@@ -77,12 +78,15 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
       jam_mulai: isLembur ? form.startTime : "",
       jam_selesai: isLembur ? form.endTime : "",
       pekerjaan: isLembur ? form.note : `[CUTI: ${form.leaveType}] ${form.note}`,
-      durasi: isLembur ? (duration ?? "") : (days ?? "")
+      durasi: isLembur ? (duration ?? "") : (days ?? ""),
     }
 
     try {
       const response = await fetch(SCRIPT_URL, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(payload),
       })
 
