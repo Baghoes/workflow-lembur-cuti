@@ -1,14 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Loader2, Clock, CalendarRange, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
+import { Search, Loader2, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9xRBuFYDzGipEKtGFmdaksQYzHLm50UpBG3Hguh7pQJUjNx2LAuj46y5pTAdZT_bDBA/exec"
 
 interface StatusItem {
   id: string
   tanggal: string
-  jenis: string
   waktu: string
   pekerjaan: string
   status: string
@@ -31,9 +30,12 @@ export function ApprovalReview() {
     setDataList(null)
 
     try {
-      const response = await fetch(
-        `${SCRIPT_URL}?action=check_status&id_finger=${encodeURIComponent(employeeId.trim())}&pin=${encodeURIComponent(pin.trim())}`
-      )
+      const url = `${SCRIPT_URL}?action=check_status&id_finger=${encodeURIComponent(employeeId.trim())}&pin=${encodeURIComponent(pin.trim())}`
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+      })
+      
       const res = await response.json()
 
       if (res.status === "success") {
@@ -43,7 +45,7 @@ export function ApprovalReview() {
       }
     } catch (err) {
       console.error(err)
-      setErrorMsg("Gagal mengambil data. Pastikan koneksi internet stabil.")
+      setErrorMsg("Gagal menghubungi server Apps Script. Pastikan deployment berstatus Anyone.")
     } finally {
       setLoading(false)
     }
@@ -74,9 +76,8 @@ export function ApprovalReview() {
 
   return (
     <div className="space-y-6">
-      {/* Box Verifikasi Cek Status */}
       <form onSubmit={handleCheck} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-        <p className="text-xs text-slate-500 font-medium">
+        <p className="text-xs text-slate-600 font-medium">
           Masukkan ID Finger dan PIN Anda untuk memantau status persetujuan pengajuan:
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -86,7 +87,7 @@ export function ApprovalReview() {
             placeholder="ID Finger Anda"
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value.replace(/\D/g, ""))}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             required
           />
           <input
@@ -95,14 +96,14 @@ export function ApprovalReview() {
             placeholder="PIN Anda"
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             required
           />
         </div>
         <button
           type="submit"
           disabled={loading || !employeeId || !pin}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer"
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
           {loading ? "Mencari data..." : "Lihat Status Pengajuan"}
@@ -116,7 +117,6 @@ export function ApprovalReview() {
         </div>
       )}
 
-      {/* Tampilan Daftar Status */}
       {dataList && (
         <div className="space-y-3">
           {dataList.length === 0 ? (
@@ -140,7 +140,7 @@ export function ApprovalReview() {
 
                 <div className="text-sm text-slate-800">
                   <span className="text-xs font-medium text-slate-400 block mb-0.5">Uraian Tugas / Alasan:</span>
-                  <p className="line-clamp-2">{item.pekerjaan}</p>
+                  <p className="text-slate-700 leading-relaxed">{item.pekerjaan}</p>
                 </div>
 
                 {item.waktu && (
