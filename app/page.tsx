@@ -28,7 +28,7 @@ export default function Home() {
             <p className="text-sm font-medium text-slate-700">
               Butuh bantuan atau kendala mendesak? Hubungi HRD di{" "}
               <a
-                href="https://wa.me/6281200000000"
+                href="https://wa.me/628563444213"
                 target="_blank"
                 rel="noreferrer"
                 className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-block"
