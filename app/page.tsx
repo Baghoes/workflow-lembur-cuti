@@ -12,8 +12,8 @@ export default function Home() {
       <div className="mx-auto max-w-xl space-y-6">
         
         {/* Header Bersih & Logo Perusahaan */}
-        <header className="flex flex-col items-left text-center space-y-3">
-          <div className="flex h-20 w-auto items-center justify-center">
+        <header className="flex flex-col items-start text-left space-y-3">
+          <div className="flex h-20 w-auto items-center justify-start">
             <img
               src="/logo.png"
               alt="Logo Pelangi UV"
