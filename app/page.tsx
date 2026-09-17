@@ -12,7 +12,7 @@ export default function Home() {
       <div className="mx-auto max-w-xl space-y-6">
         
         {/* Header Bersih & Logo Perusahaan */}
-        <header className="flex flex-col items-center text-center space-y-3">
+        <header className="flex flex-col items-left text-center space-y-3">
           <div className="flex h-20 w-auto items-center justify-center">
             <img
               src="/logo.png"
