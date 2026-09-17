@@ -228,10 +228,12 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
                     role="tab"
                     aria-selected={active}
                     onClick={() => update("type", value)}
-                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition border ${
                       active
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                        ? value === "lembur"
+                          ? "bg-blue-50 text-blue-700 border-blue-200 shadow-sm"
+                          : "bg-purple-50 text-purple-700 border-purple-200 shadow-sm"
+                        : "border-transparent text-slate-500 hover:text-slate-700"
                     }`}
                   >
                     <Icon className="size-4" aria-hidden="true" />
@@ -239,8 +241,6 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
                   </button>
                 )
               })}
-            </div>
-          </div>
 {/* Banner Tahap Pengembangan Cuti */}
           {!isLembur && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 space-y-1">
