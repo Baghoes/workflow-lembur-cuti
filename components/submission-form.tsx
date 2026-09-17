@@ -241,7 +241,10 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
                   </button>
                 )
               })}
-{/* Banner Tahap Pengembangan Cuti */}
+            </div>
+          </div>
+
+          {/* Banner Tahap Pengembangan Cuti */}
           {!isLembur && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 space-y-1">
               <div className="flex items-center gap-2 font-semibold text-sm">
@@ -253,6 +256,7 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
               </p>
             </div>
           )}
+
           <div className="space-y-2">
             <label htmlFor="employeeId" className="block text-sm font-medium text-slate-700">
               ID Karyawan (ID Finger)
@@ -314,11 +318,11 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
 
           <button
             type="button"
-            disabled={!step1Valid}
+            disabled={!step1Valid || !isLembur}
             onClick={() => setStep(2)}
             className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Lanjut ke Rincian
+            {isLembur ? "Lanjut ke Rincian" : "Fitur Cuti Segera Hadir"}
           </button>
         </div>
       )}
