@@ -241,7 +241,18 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
               })}
             </div>
           </div>
-
+{/* Banner Tahap Pengembangan Cuti */}
+          {!isLembur && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 space-y-1">
+              <div className="flex items-center gap-2 font-semibold text-sm">
+                <Clock className="size-4 text-amber-600" />
+                <span>Fitur Pengajuan Cuti Sedang Disiapkan</span>
+              </div>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                Modul integrasi cuti online sedang dalam tahap sinkronisasi dengan kebijakan HRD. Untuk sementara waktu, pengajuan cuti dapat dilakukan langsung ke bagian HRD.
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
             <label htmlFor="employeeId" className="block text-sm font-medium text-slate-700">
               ID Karyawan (ID Finger)
