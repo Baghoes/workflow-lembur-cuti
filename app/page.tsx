@@ -33,7 +33,7 @@ export default function Home() {
                 rel="noreferrer"
                 className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-block"
               >
-                +62 812-0000-0000
+                +62 856-3444-213
               </a>
             </p>
           </div>
