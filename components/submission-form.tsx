@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Eye, EyeOff, Check, Clock, CalendarRange, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Check, Clock, CalendarRange } from "lucide-react"
 import type { Submission, SubmissionType, LeaveType } from "@/lib/types"
 import { calculateDurationHours, formatDuration, calculateDays, formatDays, LEAVE_TYPES } from "@/lib/types"
 import { DatePicker } from "@/components/date-picker"
@@ -24,9 +24,6 @@ const initialForm = {
   note: "",
 }
 
-// Menggunakan API route lokal internal Next.js (bebas blokir CORS di HP)
-const SCRIPT_URL = "/api/submit"
-
 const fieldClasses =
   "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 placeholder:text-slate-400"
 
@@ -34,9 +31,7 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
   const [form, setForm] = useState(initialForm)
   const [step, setStep] = useState(1)
   const [showPin, setShowPin] = useState(false)
-  const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const isLembur = form.type === "lembur"
 
@@ -59,104 +54,54 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
     ? Boolean(form.date && form.startTime && form.endTime && form.note.trim())
     : Boolean(form.leaveType && form.date && form.endDate && days !== null && form.note.trim())
 
-  async function handleSubmit(event: React.FormEvent) {
+  function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    if (!step2Valid || isLoading) return
+    if (!step2Valid) return
 
-    setIsLoading(true)
-    setErrorMsg(null)
-    setSuccessMsg(null)
-
-    const formattedWa = `62${form.whatsapp.replace(/^0+/, "")}`
-
-    // Payload data yang dikirim ke /api/submit
-    const payload = {
-      id_finger: form.employeeId.trim(),
-      pin: form.pin.trim(),
-      whatsapp: formattedWa,
-      tanggal: form.date,
-      jam_mulai: isLembur ? form.startTime : "",
-      jam_selesai: isLembur ? form.endTime : "",
-      pekerjaan: isLembur ? form.note : `[CUTI: ${form.leaveType}] ${form.note}`,
-      durasi: isLembur ? (duration ?? "") : (days ?? ""),
+    const base = {
+      id: crypto.randomUUID(),
+      type: form.type,
+      employeeId: form.employeeId.trim(),
+      whatsapp: `+62${form.whatsapp.replace(/^0+/, "")}`,
+      date: form.date,
+      note: form.note,
+      status: "pending" as const,
+      createdAt: Date.now(),
     }
 
-    try {
-      const response = await fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+    if (isLembur) {
+      onSubmit({
+        ...base,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        durationHours: duration,
       })
-
-      const result = await response.json()
-
-      if (result.status === "success") {
-        const generatedId = result.id_pengajuan || crypto.randomUUID()
-        
-        const base = {
-          id: generatedId,
-          type: form.type,
-          employeeId: form.employeeId.trim(),
-          whatsapp: `+${formattedWa}`,
-          date: form.date,
-          note: form.note,
-          status: "pending" as const,
-          createdAt: Date.now(),
-        }
-
-        if (isLembur) {
-          onSubmit({
-            ...base,
-            startTime: form.startTime,
-            endTime: form.endTime,
-            durationHours: duration,
-          })
-        } else {
-          onSubmit({
-            ...base,
-            startTime: "",
-            endTime: "",
-            durationHours: null,
-            leaveType: form.leaveType,
-            endDate: form.endDate,
-            totalDays: days,
-          })
-        }
-
-        setSuccessMsg(`Pengajuan berhasil terkirim! ID: ${generatedId} (${result.nama})`)
-        setForm(initialForm)
-        setStep(1)
-        window.setTimeout(() => setSuccessMsg(null), 5000)
-      } else {
-        setErrorMsg(result.message || "Pengajuan gagal diproses.")
-      }
-    } catch (error) {
-      console.error("Submission error:", error)
-      setErrorMsg("Koneksi gagal. Periksa koneksi internet Anda.")
-    } finally {
-      setIsLoading(false)
+    } else {
+      onSubmit({
+        ...base,
+        startTime: "",
+        endTime: "",
+        durationHours: null,
+        leaveType: form.leaveType,
+        endDate: form.endDate,
+        totalDays: days,
+      })
     }
+
+    setForm(initialForm)
+    setStep(1)
+    setSuccess(true)
+    window.setTimeout(() => setSuccess(false), 3500)
   }
 
   return (
     <div className="space-y-6">
-      {successMsg && (
+      {success && (
         <div
           role="status"
           className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
         >
-          {successMsg}
-        </div>
-      )}
-
-      {errorMsg && (
-        <div
-          role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-        >
-          {errorMsg}
+          Pengajuan berhasil dikirim dan menunggu persetujuan atasan.
         </div>
       )}
 
@@ -228,12 +173,10 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
                     role="tab"
                     aria-selected={active}
                     onClick={() => update("type", value)}
-                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition border ${
+                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
                       active
-                        ? value === "lembur"
-                          ? "bg-blue-50 text-blue-700 border-blue-200 shadow-sm"
-                          : "bg-purple-50 text-purple-700 border-purple-200 shadow-sm"
-                        : "border-transparent text-slate-500 hover:text-slate-700"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
                     <Icon className="size-4" aria-hidden="true" />
@@ -243,19 +186,6 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
               })}
             </div>
           </div>
-
-          {/* Banner Tahap Pengembangan Cuti */}
-          {!isLembur && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 space-y-1">
-              <div className="flex items-center gap-2 font-semibold text-sm">
-                <Clock className="size-4 text-amber-600" />
-                <span>Fitur Pengajuan Cuti Sedang Disiapkan</span>
-              </div>
-              <p className="text-xs text-amber-700 leading-relaxed">
-                Modul integrasi cuti online sedang dalam tahap sinkronisasi dengan kebijakan HRD. Untuk sementara waktu, pengajuan cuti dapat dilakukan langsung ke bagian HRD.
-              </p>
-            </div>
-          )}
 
           <div className="space-y-2">
             <label htmlFor="employeeId" className="block text-sm font-medium text-slate-700">
@@ -318,11 +248,11 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
 
           <button
             type="button"
-            disabled={!step1Valid || !isLembur}
+            disabled={!step1Valid}
             onClick={() => setStep(2)}
             className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLembur ? "Lanjut ke Rincian" : "Fitur Cuti Segera Hadir"}
+            Lanjut ke Rincian
           </button>
         </div>
       )}
@@ -444,25 +374,17 @@ export function SubmissionForm({ onSubmit }: SubmissionFormProps) {
           <div className="flex gap-3">
             <button
               type="button"
-              disabled={isLoading}
               onClick={() => setStep(1)}
-              className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
             >
               Kembali
             </button>
             <button
               type="submit"
-              disabled={!step2Valid || isLoading}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!step2Valid}
+              className="flex-1 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Mengirim data...
-                </>
-              ) : (
-                "Kirim Pengajuan"
-              )}
+              Kirim Pengajuan
             </button>
           </div>
         </form>
